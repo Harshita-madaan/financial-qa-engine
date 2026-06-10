@@ -1,0 +1,14 @@
+venv/
+.env
+data/raw/
+data/processed/
+data/index/
+__pycache__/
+*.pyc
+.DS_Store
+venv/
+data/
+*.bin
+*.sqlite3
+*.faiss
+venv/lib/
