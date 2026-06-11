@@ -5,6 +5,7 @@ Run: python -m src.indexer
 import json
 import logging
 import os
+import time
 from pathlib import Path
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_cohere import CohereEmbeddings
@@ -60,20 +61,31 @@ def chunk_pages(pages):
 
 
 def build_index(texts, metas):
-    import shutil
     INDEX_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Clear old index if exists
-    if Path(CHROMA_DIR).exists():
-        shutil.rmtree(CHROMA_DIR)
-        log.info("Cleared old index.")
-
     embeddings = get_embeddings()
-    log.info(f"Embedding {len(texts)} chunks with Cohere embed-english-v3.0 ...")
 
-    BATCH = 90  # Cohere free tier limit is 100/min
-    import time
+    BATCH = 90
     vectorstore = None
+
+    # Resume from existing index if it exists
+    if Path(CHROMA_DIR).exists():
+        log.info("Found existing index — resuming...")
+        vectorstore = Chroma(
+            persist_directory=CHROMA_DIR,
+            embedding_function=embeddings,
+        )
+        existing_count = vectorstore._collection.count()
+        log.info(f"Already indexed: {existing_count} chunks. Resuming from chunk {existing_count}...")
+        texts = texts[existing_count:]
+        metas = metas[existing_count:]
+
+        if len(texts) == 0:
+            log.info("All chunks already indexed!")
+            return vectorstore
+    else:
+        log.info("No existing index found. Starting fresh...")
+
+    log.info(f"Embedding {len(texts)} remaining chunks with Cohere embed-english-v3.0 ...")
 
     for i in range(0, len(texts), BATCH):
         batch_texts = texts[i:i+BATCH]
@@ -91,7 +103,7 @@ def build_index(texts, metas):
             vectorstore.add_texts(texts=batch_texts, metadatas=batch_metas)
 
         if i + BATCH < len(texts):
-            time.sleep(12)  # stay within free tier rate limit
+            time.sleep(12)
 
     with open(INDEX_DIR / "metadata.json", "w") as f:
         json.dump(metas, f, indent=2)
