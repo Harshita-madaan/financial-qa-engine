@@ -53,3 +53,9 @@ python gradio_app.py
 - **Citation-enforced prompting** — every claim must be cited with [Ticker | Filing | Page]
 - **Graceful failure** — responds "Not found" instead of hallucinating
 - **RAGAS evaluation** — quantified faithfulness and relevancy scores
+
+## 📸 Demo Screenshots
+
+![Demo 1](assets/demo1.png)
+
+![Demo 2](assets/demo2.png)
